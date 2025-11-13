@@ -1,11 +1,11 @@
 <?php
-// Sisipkan file koneksi
+
 include 'koneksi.php';
 
-// Ambil data untuk dropdown kategori
+
 $kategori_result = $conn->query("SELECT id_kategori, nama_kategori FROM kategori ORDER BY nama_kategori");
 
-// Ambil data untuk dropdown status
+
 $status_result = $conn->query("SELECT id_status, nama_status FROM status_barang ORDER BY nama_status");
 ?>
 
@@ -46,7 +46,7 @@ $status_result = $conn->query("SELECT id_status, nama_status FROM status_barang 
         .form-group select {
             width: 100%;
             padding: 8px;
-            box-sizing: border-box; /* Agar padding tidak menambah lebar */
+            box-sizing: border-box; 
             border: 1px solid #ccc;
             border-radius: 4px;
         }
@@ -82,7 +82,7 @@ $status_result = $conn->query("SELECT id_status, nama_status FROM status_barang 
                 <select id="id_kategori" name="id_kategori" required>
                     <option value="">-- Pilih Kategori --</option>
                     <?php
-                    // Looping data kategori
+                    
                     if ($kategori_result->num_rows > 0) {
                         while($row = $kategori_result->fetch_assoc()) {
                             echo '<option value="' . $row['id_kategori'] . '">' . htmlspecialchars($row['nama_kategori']) . '</option>';
@@ -102,7 +102,7 @@ $status_result = $conn->query("SELECT id_status, nama_status FROM status_barang 
                 <select id="id_status" name="id_status" required>
                     <option value="">-- Pilih Status --</option>
                     <?php
-                    // Looping data status
+                    
                     if ($status_result->num_rows > 0) {
                         while($row = $status_result->fetch_assoc()) {
                             echo '<option value="' . $row['id_status'] . '">' . htmlspecialchars($row['nama_status']) . '</option>';
@@ -126,6 +126,6 @@ $status_result = $conn->query("SELECT id_status, nama_status FROM status_barang 
 </html>
 
 <?php
-// Tutup koneksi setelah selesai
+
 $conn->close();
 ?>
