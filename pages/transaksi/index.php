@@ -11,10 +11,6 @@ require_once dirname(dirname(dirname(__FILE__))) . '/config/database.php';
 $error = '';
 $success = '';
 
-// GET - Delete transaksi
-// File: pages/transaksi/index.php
-
-// GET - Delete transaksi
 if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
     $id = intval($_GET['id']);
     
@@ -51,11 +47,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['action']) && $_GET['acti
     }
 }
 
-// NEW CODE (menghitung total kuantitas barang)
-$query = "SELECT t.*, u.nama_lengkap, SUM(dt.jumlah) as jumlah_item 
+$query = "SELECT t.*, u.nama_lengkap, 
+            SUM(dt.jumlah) as jumlah_item,
+            GROUP_CONCAT(b.nama_barang ORDER BY b.nama_barang SEPARATOR ', ') as list_barang 
           FROM transaksi t
           LEFT JOIN users u ON t.id_user = u.id_user
           LEFT JOIN detail_transaksi dt ON t.id_transaksi = dt.id_transaksi
+          LEFT JOIN barang b ON dt.id_barang = b.id_barang
           GROUP BY t.id_transaksi
           ORDER BY t.id_transaksi DESC";
 $result = $conn->query($query);
@@ -109,15 +107,19 @@ while ($row = $result->fetch_assoc()) {
         <?php if (count($transaksis) > 0): ?>
             <table class="table">
                 <thead>
+
+                <thead>
                     <tr>
                         <th>ID</th>
                         <th>Tanggal Pinjam</th>
                         <th>Tanggal Kembali</th>
-                        <th>Items</th>
+                        <th>Daftar Barang</th> 
+                        <th>Total Items</th> 
                         <th>Total Harga</th>
                         <th>Status</th>
                         <th>Aksi</th>
                     </tr>
+                </thead>
                 </thead>
                 <tbody>
                     <?php foreach ($transaksis as $trans): ?>
@@ -125,8 +127,7 @@ while ($row = $result->fetch_assoc()) {
                             <td><?php echo $trans['id_transaksi']; ?></td>
                             <td><?php echo date('d/m/Y', strtotime($trans['tanggal_pinjam'])); ?></td>
                             <td><?php echo $trans['tanggal_kembali'] ? date('d/m/Y', strtotime($trans['tanggal_kembali'])) : '-'; ?></td>
-                            <td><?php echo $trans['jumlah_item']; ?></td>
-                            <td>Rp <?php echo number_format($trans['total_harga'] ?? 0, 2, ',', '.'); ?></td>
+                            <td><?php echo htmlspecialchars($trans['list_barang'] ?? '-'); ?></td> <td><?php echo $trans['jumlah_item']; ?></td> <td>Rp <?php echo number_format($trans['total_harga'] ?? 0, 2, ',', '.'); ?></td>
                             <td>
                                 <span style="padding: 5px 10px; border-radius: 5px; 
                                     <?php 
