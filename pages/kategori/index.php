@@ -12,22 +12,35 @@ $error = '';
 $success = '';
 
 // GET - Ambil data kategori
+// File: pages/kategori/index.php
+
+// GET - Ambil data kategori
 if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
     $id = intval($_GET['id']);
     
-    // Cek apakah kategori digunakan di barang
-    $check = $conn->query("SELECT COUNT(*) as total FROM barang WHERE id_kategori = $id");
-    $result = $check->fetch_assoc();
+    // Cek apakah kategori digunakan di barang (menggunakan prepared statement)
+    $check_query = "SELECT COUNT(*) as total FROM barang WHERE id_kategori = ?";
+    $check_stmt = $conn->prepare($check_query);
+    $check_stmt->bind_param("i", $id);
+    $check_stmt->execute();
+    $result = $check_stmt->get_result();
+    $row = $result->fetch_assoc();
+    $check_stmt->close();
     
-    if ($result['total'] > 0) {
+    if ($row['total'] > 0) {
         $error = "Kategori tidak bisa dihapus karena masih digunakan oleh barang!";
     } else {
-        $query = "DELETE FROM kategori WHERE id_kategori = $id";
-        if ($conn->query($query)) {
+        // DELETE kategori (menggunakan prepared statement)
+        $delete_query = "DELETE FROM kategori WHERE id_kategori = ?";
+        $delete_stmt = $conn->prepare($delete_query);
+        $delete_stmt->bind_param("i", $id);
+        
+        if ($delete_stmt->execute()) {
             $success = "Kategori berhasil dihapus!";
         } else {
             $error = "Gagal menghapus kategori!";
         }
+        $delete_stmt->close();
     }
 }
 
