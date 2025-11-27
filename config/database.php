@@ -10,17 +10,23 @@ if (!defined('BASE_PATH')) {
     define('BASE_PATH', dirname(dirname(__FILE__)));
 }
 
+// File: config/database.php
+
 try {
-    $conn = new mysqli($host, $user, $password, $database);
+    // Menekan peringatan/error saat koneksi (hanya untuk penanganan manual)
+    $conn = @new mysqli($host, $user, $password, $database);
     
     // Cek koneksi
     if ($conn->connect_error) {
-        die("Koneksi gagal: " . $conn->connect_error);
+        // Di lingkungan produksi, error ini harus di-log.
+        // Tampilkan pesan generik ke pengguna, bukan detail error.
+        die("Koneksi gagal: Terjadi kesalahan saat mencoba koneksi database.");
     }
     
     // Set charset
     $conn->set_charset("utf8");
 } catch (Exception $e) {
-    die("Error: " . $e->getMessage());
+    // Tampilkan pesan generik untuk error tak terduga
+    die("Error: Terjadi kesalahan tak terduga.");
 }
 ?>
