@@ -12,17 +12,41 @@ $error = '';
 $success = '';
 
 // GET - Delete transaksi
+// File: pages/transaksi/index.php
+
+// GET - Delete transaksi
 if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
     $id = intval($_GET['id']);
     
-    // Delete detail_transaksi dulu
-    $conn->query("DELETE FROM detail_transaksi WHERE id_transaksi = $id");
+    $conn->begin_transaction(); // Mulai transaksi untuk atomisitas
+    $transaction_ok = true;
+
+    // 1. Delete detail_transaksi (menggunakan prepared statement)
+    $delete_detail_query = "DELETE FROM detail_transaksi WHERE id_transaksi = ?";
+    $stmt_detail = $conn->prepare($delete_detail_query);
+    $stmt_detail->bind_param("i", $id);
+    if (!$stmt_detail->execute()) {
+        $transaction_ok = false;
+    }
+    $stmt_detail->close();
+
+    // 2. Delete transaksi (menggunakan prepared statement)
+    if ($transaction_ok) {
+        $delete_transaksi_query = "DELETE FROM transaksi WHERE id_transaksi = ?";
+        $stmt_transaksi = $conn->prepare($delete_transaksi_query);
+        $stmt_transaksi->bind_param("i", $id);
+        if (!$stmt_transaksi->execute()) {
+            $transaction_ok = false;
+        }
+        $stmt_transaksi->close();
+    }
     
-    // Kemudian delete transaksi
-    $query = "DELETE FROM transaksi WHERE id_transaksi = $id";
-    if ($conn->query($query)) {
+    // 3. Commit or Rollback
+    if ($transaction_ok) {
+        $conn->commit();
         $success = "Transaksi berhasil dihapus!";
     } else {
+        $conn->rollback();
         $error = "Gagal menghapus transaksi!";
     }
 }
