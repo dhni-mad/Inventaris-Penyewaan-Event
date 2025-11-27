@@ -1,17 +1,10 @@
 <?php
-/**
- * Script Setup Database
- * Jalankan script ini sekali untuk menginisialisasi data admin default
- */
-
 require_once 'config/database.php';
 
-// Cek apakah sudah ada user
 $check = $conn->query("SELECT COUNT(*) as total FROM users");
 $result = $check->fetch_assoc();
 
 if ($result['total'] == 0) {
-    // Insert admin default
     $username = 'admin';
     $password = password_hash('admin123', PASSWORD_BCRYPT);
     $nama_lengkap = 'Administrator';
@@ -30,7 +23,6 @@ if ($result['total'] == 0) {
     }
     $stmt->close();
 
-    // Insert status default
     $statuses = ['Tersedia', 'Rusak', 'Dipinjam'];
     $query = "INSERT INTO status_barang (nama_status) VALUES (?)";
     $stmt = $conn->prepare($query);

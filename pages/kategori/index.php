@@ -11,14 +11,9 @@ require_once dirname(dirname(dirname(__FILE__))) . '/config/database.php';
 $error = '';
 $success = '';
 
-// GET - Ambil data kategori
-// File: pages/kategori/index.php
-
-// GET - Ambil data kategori
 if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
     $id = intval($_GET['id']);
     
-    // Cek apakah kategori digunakan di barang (menggunakan prepared statement)
     $check_query = "SELECT COUNT(*) as total FROM barang WHERE id_kategori = ?";
     $check_stmt = $conn->prepare($check_query);
     $check_stmt->bind_param("i", $id);
@@ -30,7 +25,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['action']) && $_GET['acti
     if ($row['total'] > 0) {
         $error = "Kategori tidak bisa dihapus karena masih digunakan oleh barang!";
     } else {
-        // DELETE kategori (menggunakan prepared statement)
         $delete_query = "DELETE FROM kategori WHERE id_kategori = ?";
         $delete_stmt = $conn->prepare($delete_query);
         $delete_stmt->bind_param("i", $id);
@@ -44,7 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['action']) && $_GET['acti
     }
 }
 
-// Ambil semua kategori
 $query = "SELECT * FROM kategori ORDER BY id_kategori DESC";
 $result = $conn->query($query);
 $categories = [];
@@ -62,7 +55,6 @@ while ($row = $result->fetch_assoc()) {
     <link rel="stylesheet" href="../../assets/css/style.css">
 </head>
 <body>
-    <!-- Navbar -->
     <nav class="navbar">
         <h2>Sistem Inventaris Barang</h2>
         <ul class="navbar-menu">
@@ -78,7 +70,6 @@ while ($row = $result->fetch_assoc()) {
         </div>
     </nav>
 
-    <!-- Main Content -->
     <div class="container">
         <h1 class="page-title">Kelola Kategori</h1>
 

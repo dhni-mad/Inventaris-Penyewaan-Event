@@ -11,7 +11,6 @@ require_once dirname(dirname(dirname(__FILE__))) . '/config/database.php';
 $error = '';
 $success = '';
 
-// Ambil list users, barang
 $users = [];
 $query = "SELECT id_user, nama_lengkap FROM users ORDER BY nama_lengkap";
 $result = $conn->query($query);
@@ -26,22 +25,18 @@ while ($row = $result->fetch_assoc()) {
     $barangs[] = $row;
 }
 
-// File: dhni-mad/inventaris-penyewaan-event/.../pages/transaksi/add.php
-
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $id_user = intval($_POST['id_user']);
     $tanggal_pinjam = htmlspecialchars($_POST['tanggal_pinjam']);
     $tanggal_kembali = htmlspecialchars($_POST['tanggal_kembali']);
     $status_transaksi = htmlspecialchars($_POST['status_transaksi']);
     
-    // Array barang
     $barang_ids = $_POST['barang_id'] ?? [];
     $jumlah = $_POST['jumlah'] ?? [];
 
     if ($id_user == 0 || empty($tanggal_pinjam) || count($barang_ids) == 0) {
         $error = "Semua field harus diisi dan minimal ada 1 barang!";
     } else {
-        // --- 1. PRE-TRANSACTION VALIDATION (Stock & Data Check) ---
         $total_harga = 0;
         $detail_data = [];
         $valid_request = true;
@@ -51,7 +46,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $b_id = intval($barang_ids[$i]);
                 $b_jumlah = intval($jumlah[$i]);
                 
-                // Cari harga dan stok barang
                 $found_item = false;
                 foreach ($barangs as $b) {
                     if ($b['id_barang'] == $b_id) {
@@ -60,14 +54,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         if ($b_jumlah <= 0) {
                              $error = "Jumlah barang tidak boleh kurang dari 1!";
                              $valid_request = false;
-                             break 2; // Keluar dari kedua loop
+                             break 2;
                         }
                         
-                        // VALIDASI STOK SERVER-SIDE
                         if ($b_jumlah > $b['stok']) {
                             $error = "Jumlah barang " . htmlspecialchars($b['nama_barang']) . " (" . $b_jumlah . ") melebihi stok yang tersedia (" . $b['stok'] . ")!";
                             $valid_request = false;
-                            break 2; // Keluar dari kedua loop
+                            break 2;
                         }
                         
                         $b_harga = $b['harga_sewa'];
@@ -90,12 +83,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
         
-        // --- 2. START TRANSACTION AND EXECUTION ---
         if ($valid_request) {
-            $conn->begin_transaction(); // Mulai transaksi database
+            $conn->begin_transaction();
             $transaction_ok = true;
 
-            // 2.1. Insert transaksi
             $query_transaksi = "INSERT INTO transaksi (id_user, tanggal_pinjam, tanggal_kembali, total_harga, status_transaksi) 
                               VALUES (?, ?, ?, ?, ?)";
             $stmt_transaksi = $conn->prepare($query_transaksi);
@@ -108,22 +99,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             } else {
                 $id_transaksi = $conn->insert_id;
 
-                // 2.2. Insert detail transaksi & Update stok
                 $detail_query = "INSERT INTO detail_transaksi (id_transaksi, id_barang, jumlah, harga_satuan) VALUES (?, ?, ?, ?)";
                 $detail_stmt = $conn->prepare($detail_query);
                 
-                $stock_update_query = "UPDATE barang SET stok = stok - ? WHERE id_barang = ?"; // Query Pengurangan Stok
+                $stock_update_query = "UPDATE barang SET stok = stok - ? WHERE id_barang = ?";
                 $stock_stmt = $conn->prepare($stock_update_query);
 
                 foreach ($detail_data as $detail) {
-                    // Insert detail
                     $detail_stmt->bind_param("iiii", $id_transaksi, $detail['id_barang'], $detail['jumlah'], $detail['harga_satuan']);
                     if (!$detail_stmt->execute()) {
                         $transaction_ok = false;
                         break;
                     }
                     
-                    // Update stok (Pengurangan Stok)
                     $stock_stmt->bind_param("ii", $detail['jumlah'], $detail['id_barang']);
                     if (!$stock_stmt->execute()) {
                         $transaction_ok = false;
@@ -135,7 +123,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
             $stmt_transaksi->close();
 
-            // --- 3. COMMIT or ROLLBACK ---
             if ($transaction_ok) {
                 $conn->commit();
                 $success = "Transaksi berhasil dibuat! (ID: " . $id_transaksi . ")";
@@ -175,7 +162,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </style>
 </head>
 <body>
-    <!-- Navbar -->
     <nav class="navbar">
         <h2>Sistem Inventaris Barang</h2>
         <ul class="navbar-menu">
@@ -191,7 +177,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         </div>
     </nav>
 
-    <!-- Main Content -->
     <div class="container">
         <h1 class="page-title">Tambah Transaksi</h1>
 
@@ -367,10 +352,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }).format(amount);
         }
 
-        // Setup listeners untuk item pertama
         setupSelectListeners(0);
         
-        // Set tanggal hari ini sebagai default
         document.getElementById('tanggal_pinjam').valueAsDate = new Date();
     </script>
 </body>

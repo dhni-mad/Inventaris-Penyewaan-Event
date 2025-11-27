@@ -17,7 +17,6 @@ if ($id == 0) {
     exit;
 }
 
-// Ambil data barang
 $query = "SELECT * FROM barang WHERE id_barang = ?";
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $id);
@@ -31,7 +30,6 @@ if (!$barang) {
     exit;
 }
 
-// Ambil kategori dan status
 $categories = [];
 $query = "SELECT * FROM kategori ORDER BY nama_kategori";
 $result = $conn->query($query);
@@ -84,7 +82,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <link rel="stylesheet" href="../../assets/css/style.css">
 </head>
 <body>
-    <!-- Navbar -->
     <nav class="navbar">
         <h2>Sistem Inventaris Barang</h2>
         <ul class="navbar-menu">
@@ -100,7 +97,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         </div>
     </nav>
 
-    <!-- Main Content -->
     <div class="container">
         <h1 class="page-title">Edit Barang</h1>
 

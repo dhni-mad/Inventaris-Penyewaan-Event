@@ -15,7 +15,6 @@ if ($id == 0) {
     exit;
 }
 
-// Ambil data transaksi
 $query = "SELECT t.*, u.nama_lengkap FROM transaksi t 
           LEFT JOIN users u ON t.id_user = u.id_user 
           WHERE t.id_transaksi = ?";
@@ -31,7 +30,6 @@ if (!$transaksi) {
     exit;
 }
 
-// Ambil detail transaksi
 $query = "SELECT dt.*, b.nama_barang FROM detail_transaksi dt 
           LEFT JOIN barang b ON dt.id_barang = b.id_barang 
           WHERE dt.id_transaksi = ?";
@@ -55,7 +53,6 @@ $stmt->close();
     <link rel="stylesheet" href="../../assets/css/style.css">
 </head>
 <body>
-    <!-- Navbar -->
     <nav class="navbar">
         <h2>Sistem Inventaris Barang</h2>
         <ul class="navbar-menu">
@@ -71,7 +68,6 @@ $stmt->close();
         </div>
     </nav>
 
-    <!-- Main Content -->
     <div class="container">
         <h1 class="page-title">Detail Transaksi #<?php echo $transaksi['id_transaksi']; ?></h1>
 

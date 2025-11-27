@@ -11,14 +11,9 @@ require_once dirname(dirname(dirname(__FILE__))) . '/config/database.php';
 $error = '';
 $success = '';
 
-// GET - Ambil data barang
-// File: pages/barang/index.php
-
-// GET - Ambil data barang
 if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
     $id = intval($_GET['id']);
     
-    // Cek apakah barang digunakan di detail transaksi (menggunakan prepared statement)
     $check_query = "SELECT COUNT(*) as total FROM detail_transaksi WHERE id_barang = ?";
     $check_stmt = $conn->prepare($check_query);
     $check_stmt->bind_param("i", $id);
@@ -30,7 +25,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['action']) && $_GET['acti
     if ($row['total'] > 0) {
         $error = "Barang tidak bisa dihapus karena sudah digunakan dalam transaksi!";
     } else {
-        // DELETE barang (menggunakan prepared statement)
         $delete_query = "DELETE FROM barang WHERE id_barang = ?";
         $delete_stmt = $conn->prepare($delete_query);
         $delete_stmt->bind_param("i", $id);
@@ -44,7 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['action']) && $_GET['acti
     }
 }
 
-// Ambil semua barang dengan kategori dan status
 $query = "SELECT b.*, k.nama_kategori, s.nama_status 
           FROM barang b
           LEFT JOIN kategori k ON b.id_kategori = k.id_kategori
@@ -66,7 +59,6 @@ while ($row = $result->fetch_assoc()) {
     <link rel="stylesheet" href="../../assets/css/style.css">
 </head>
 <body>
-    <!-- Navbar -->
     <nav class="navbar">
         <h2>Sistem Inventaris Barang</h2>
         <ul class="navbar-menu">
@@ -82,7 +74,6 @@ while ($row = $result->fetch_assoc()) {
         </div>
     </nav>
 
-    <!-- Main Content -->
     <div class="container">
         <h1 class="page-title">Kelola Barang</h1>
 

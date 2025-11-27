@@ -17,7 +17,6 @@ if ($id == 0) {
     exit;
 }
 
-// Ambil data transaksi
 $query = "SELECT * FROM transaksi WHERE id_transaksi = ?";
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $id);
@@ -31,7 +30,6 @@ if (!$transaksi) {
     exit;
 }
 
-// Ambil detail transaksi
 $query = "SELECT dt.*, b.nama_barang, b.harga_sewa FROM detail_transaksi dt 
           LEFT JOIN barang b ON dt.id_barang = b.id_barang 
           WHERE dt.id_transaksi = ?";
@@ -45,7 +43,6 @@ while ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
-// Ambil list users dan barang
 $users = [];
 $query = "SELECT id_user, nama_lengkap FROM users ORDER BY nama_lengkap";
 $result = $conn->query($query);
@@ -60,9 +57,6 @@ while ($row = $result->fetch_assoc()) {
     $barangs[] = $row;
 }
 
-// File: dhni-mad/inventaris-penyewaan-event/.../pages/transaksi/edit.php
-
-// Ambil status lama SEBELUM POST request
 $old_status = $transaksi['status_transaksi']; 
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -73,12 +67,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (empty($status_transaksi)) {
         $error = "Status transaksi harus dipilih!";
     } else {
-        $conn->begin_transaction(); // Mulai transaksi database
+        $conn->begin_transaction();
         $transaction_ok = true;
         
         $tanggal_kembali_db = !empty($tanggal_kembali) ? $tanggal_kembali : null;
         
-        // 1. UPDATE Transaksi
         $query_update_transaksi = "UPDATE transaksi SET tanggal_kembali = ?, status_transaksi = ? WHERE id_transaksi = ?";
         $stmt_update_transaksi = $conn->prepare($query_update_transaksi);
         $stmt_update_transaksi->bind_param("ssi", $tanggal_kembali_db, $new_status, $id);
@@ -89,10 +82,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         $stmt_update_transaksi->close();
         
-        // 2. LOGIKA PENGEMBALIAN STOK
-        // Stok harus dikembalikan (ditambah) jika status berubah dari 'proses' ke 'selesai' atau 'batal'
         if ($transaction_ok && $old_status == 'proses' && ($new_status == 'selesai' || $new_status == 'batal')) {
-            $stock_update_query = "UPDATE barang SET stok = stok + ? WHERE id_barang = ?"; // Query Penambahan Stok
+            $stock_update_query = "UPDATE barang SET stok = stok + ? WHERE id_barang = ?";
             $stock_stmt = $conn->prepare($stock_update_query);
 
             foreach ($details as $detail) {
@@ -109,11 +100,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $stock_stmt->close();
         }
 
-        // 3. COMMIT or ROLLBACK
         if ($transaction_ok) {
             $conn->commit();
             $success = "Transaksi berhasil diperbarui!";
-            // Update variabel lokal untuk tampilan
             $transaksi['tanggal_kembali'] = $tanggal_kembali_db;
             $transaksi['status_transaksi'] = $new_status;
         } else {
@@ -135,7 +124,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <link rel="stylesheet" href="../../assets/css/style.css">
 </head>
 <body>
-    <!-- Navbar -->
     <nav class="navbar">
         <h2>Sistem Inventaris Barang</h2>
         <ul class="navbar-menu">
@@ -151,7 +139,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         </div>
     </nav>
 
-    <!-- Main Content -->
     <div class="container">
         <h1 class="page-title">Edit Transaksi #<?php echo $transaksi['id_transaksi']; ?></h1>
 

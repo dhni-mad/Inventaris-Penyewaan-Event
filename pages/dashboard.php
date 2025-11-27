@@ -1,7 +1,6 @@
 <?php
 session_start();
 
-// Redirect ke login jika belum login
 if (!isset($_SESSION['id_user'])) {
     header("Location: ../index.php");
     exit;
@@ -9,28 +8,23 @@ if (!isset($_SESSION['id_user'])) {
 
 require_once '../config/database.php';
 
-// Hitung statistik
 $stats = [];
 
-// Total Barang
 $query = "SELECT COUNT(*) as total FROM barang";
 $result = $conn->query($query);
 $row = $result->fetch_assoc();
 $stats['total_barang'] = $row['total'];
 
-// Total Kategori
 $query = "SELECT COUNT(*) as total FROM kategori";
 $result = $conn->query($query);
 $row = $result->fetch_assoc();
 $stats['total_kategori'] = $row['total'];
 
-// Total Transaksi
 $query = "SELECT COUNT(*) as total FROM transaksi";
 $result = $conn->query($query);
 $row = $result->fetch_assoc();
 $stats['total_transaksi'] = $row['total'];
 
-// Total Stok
 $query = "SELECT SUM(stok) as total FROM barang";
 $result = $conn->query($query);
 $row = $result->fetch_assoc();
@@ -46,7 +40,6 @@ $stats['total_stok'] = $row['total'] ?? 0;
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
-    <!-- Navbar -->
     <nav class="navbar">
         <h2>Sistem Inventaris Barang</h2>
         <ul class="navbar-menu">
@@ -62,7 +55,6 @@ $stats['total_stok'] = $row['total'] ?? 0;
         </div>
     </nav>
 
-    <!-- Main Content -->
     <div class="container">
         <h1 class="page-title">Dashboard</h1>
 

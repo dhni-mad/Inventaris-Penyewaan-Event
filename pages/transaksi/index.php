@@ -14,10 +14,9 @@ $success = '';
 if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
     $id = intval($_GET['id']);
     
-    $conn->begin_transaction(); // Mulai transaksi untuk atomisitas
+    $conn->begin_transaction();
     $transaction_ok = true;
 
-    // 1. Delete detail_transaksi (menggunakan prepared statement)
     $delete_detail_query = "DELETE FROM detail_transaksi WHERE id_transaksi = ?";
     $stmt_detail = $conn->prepare($delete_detail_query);
     $stmt_detail->bind_param("i", $id);
@@ -26,7 +25,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['action']) && $_GET['acti
     }
     $stmt_detail->close();
 
-    // 2. Delete transaksi (menggunakan prepared statement)
     if ($transaction_ok) {
         $delete_transaksi_query = "DELETE FROM transaksi WHERE id_transaksi = ?";
         $stmt_transaksi = $conn->prepare($delete_transaksi_query);
@@ -37,7 +35,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['action']) && $_GET['acti
         $stmt_transaksi->close();
     }
     
-    // 3. Commit or Rollback
     if ($transaction_ok) {
         $conn->commit();
         $success = "Transaksi berhasil dihapus!";
@@ -72,7 +69,6 @@ while ($row = $result->fetch_assoc()) {
     <link rel="stylesheet" href="../../assets/css/style.css">
 </head>
 <body>
-    <!-- Navbar -->
     <nav class="navbar">
         <h2>Sistem Inventaris Barang</h2>
         <ul class="navbar-menu">
@@ -88,7 +84,6 @@ while ($row = $result->fetch_assoc()) {
         </div>
     </nav>
 
-    <!-- Main Content -->
     <div class="container">
         <h1 class="page-title">Kelola Transaksi</h1>
 

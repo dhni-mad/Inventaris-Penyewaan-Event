@@ -1,7 +1,6 @@
 <?php
 session_start();
 
-// Jika sudah login, arahkan ke dashboard
 if (isset($_SESSION['id_user'])) {
     header("Location: pages/dashboard.php");
     exit;
@@ -18,7 +17,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (empty($username) || empty($password)) {
         $error = "Username dan Password harus diisi!";
     } else {
-        // Cek di database
         $query = "SELECT * FROM users WHERE username = ?";
         $stmt = $conn->prepare($query);
         $stmt->bind_param("s", $username);
@@ -28,7 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($result->num_rows > 0) {
             $user = $result->fetch_assoc();
             
-            // Verifikasi password
             if (password_verify($password, $user['password'])) {
                 $_SESSION['id_user'] = $user['id_user'];
                 $_SESSION['username'] = $user['username'];
