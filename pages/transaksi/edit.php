@@ -60,27 +60,68 @@ while ($row = $result->fetch_assoc()) {
     $barangs[] = $row;
 }
 
+// File: dhni-mad/inventaris-penyewaan-event/.../pages/transaksi/edit.php
+
+// Ambil status lama SEBELUM POST request
+$old_status = $transaksi['status_transaksi']; 
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $tanggal_kembali = htmlspecialchars($_POST['tanggal_kembali']);
     $status_transaksi = htmlspecialchars($_POST['status_transaksi']);
+    $new_status = $status_transaksi;
 
     if (empty($status_transaksi)) {
         $error = "Status transaksi harus dipilih!";
     } else {
-        $tanggal_kembali = !empty($tanggal_kembali) ? $tanggal_kembali : null;
+        $conn->begin_transaction(); // Mulai transaksi database
+        $transaction_ok = true;
         
-        $query = "UPDATE transaksi SET tanggal_kembali = ?, status_transaksi = ? WHERE id_transaksi = ?";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("ssi", $tanggal_kembali, $status_transaksi, $id);
+        $tanggal_kembali_db = !empty($tanggal_kembali) ? $tanggal_kembali : null;
+        
+        // 1. UPDATE Transaksi
+        $query_update_transaksi = "UPDATE transaksi SET tanggal_kembali = ?, status_transaksi = ? WHERE id_transaksi = ?";
+        $stmt_update_transaksi = $conn->prepare($query_update_transaksi);
+        $stmt_update_transaksi->bind_param("ssi", $tanggal_kembali_db, $new_status, $id);
 
-        if ($stmt->execute()) {
-            $success = "Transaksi berhasil diperbarui!";
-            $transaksi['tanggal_kembali'] = $tanggal_kembali;
-            $transaksi['status_transaksi'] = $status_transaksi;
-        } else {
+        if (!$stmt_update_transaksi->execute()) {
+            $transaction_ok = false;
             $error = "Gagal memperbarui transaksi!";
         }
-        $stmt->close();
+        $stmt_update_transaksi->close();
+        
+        // 2. LOGIKA PENGEMBALIAN STOK
+        // Stok harus dikembalikan (ditambah) jika status berubah dari 'proses' ke 'selesai' atau 'batal'
+        if ($transaction_ok && $old_status == 'proses' && ($new_status == 'selesai' || $new_status == 'batal')) {
+            $stock_update_query = "UPDATE barang SET stok = stok + ? WHERE id_barang = ?"; // Query Penambahan Stok
+            $stock_stmt = $conn->prepare($stock_update_query);
+
+            foreach ($details as $detail) {
+                $jumlah_dikembalikan = $detail['jumlah'];
+                $id_barang = $detail['id_barang'];
+                
+                $stock_stmt->bind_param("ii", $jumlah_dikembalikan, $id_barang);
+                if (!$stock_stmt->execute()) {
+                    $transaction_ok = false;
+                    $error = "Gagal mengembalikan stok barang! Data transaksi dibatalkan.";
+                    break;
+                }
+            }
+            $stock_stmt->close();
+        }
+
+        // 3. COMMIT or ROLLBACK
+        if ($transaction_ok) {
+            $conn->commit();
+            $success = "Transaksi berhasil diperbarui!";
+            // Update variabel lokal untuk tampilan
+            $transaksi['tanggal_kembali'] = $tanggal_kembali_db;
+            $transaksi['status_transaksi'] = $new_status;
+        } else {
+            $conn->rollback();
+            if (empty($error)) {
+                 $error = "Gagal memperbarui transaksi dan mengelola stok. Data tidak disimpan.";
+            }
+        }
     }
 }
 ?>

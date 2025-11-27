@@ -26,6 +26,8 @@ while ($row = $result->fetch_assoc()) {
     $barangs[] = $row;
 }
 
+// File: dhni-mad/inventaris-penyewaan-event/.../pages/transaksi/add.php
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $id_user = intval($_POST['id_user']);
     $tanggal_pinjam = htmlspecialchars($_POST['tanggal_pinjam']);
@@ -39,18 +41,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if ($id_user == 0 || empty($tanggal_pinjam) || count($barang_ids) == 0) {
         $error = "Semua field harus diisi dan minimal ada 1 barang!";
     } else {
-        // Hitung total harga
+        // --- 1. PRE-TRANSACTION VALIDATION (Stock & Data Check) ---
         $total_harga = 0;
         $detail_data = [];
+        $valid_request = true;
 
         for ($i = 0; $i < count($barang_ids); $i++) {
             if (!empty($barang_ids[$i]) && !empty($jumlah[$i])) {
                 $b_id = intval($barang_ids[$i]);
                 $b_jumlah = intval($jumlah[$i]);
                 
-                // Cari harga barang
+                // Cari harga dan stok barang
+                $found_item = false;
                 foreach ($barangs as $b) {
                     if ($b['id_barang'] == $b_id) {
+                        $found_item = true;
+                        
+                        if ($b_jumlah <= 0) {
+                             $error = "Jumlah barang tidak boleh kurang dari 1!";
+                             $valid_request = false;
+                             break 2; // Keluar dari kedua loop
+                        }
+                        
+                        // VALIDASI STOK SERVER-SIDE
+                        if ($b_jumlah > $b['stok']) {
+                            $error = "Jumlah barang " . htmlspecialchars($b['nama_barang']) . " (" . $b_jumlah . ") melebihi stok yang tersedia (" . $b['stok'] . ")!";
+                            $valid_request = false;
+                            break 2; // Keluar dari kedua loop
+                        }
+                        
                         $b_harga = $b['harga_sewa'];
                         $subtotal = $b_harga * $b_jumlah;
                         $total_harga += $subtotal;
@@ -63,35 +82,68 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         break;
                     }
                 }
+                if (!$found_item) {
+                     $error = "Barang dengan ID " . $b_id . " tidak ditemukan!";
+                     $valid_request = false;
+                     break;
+                }
             }
         }
-
-        // Insert transaksi
-        $query = "INSERT INTO transaksi (id_user, tanggal_pinjam, tanggal_kembali, total_harga, status_transaksi) 
-                  VALUES (?, ?, ?, ?, ?)";
-        $stmt = $conn->prepare($query);
         
-        $tanggal_kembali = !empty($tanggal_kembali) ? $tanggal_kembali : null;
-        $stmt->bind_param("issds", $id_user, $tanggal_pinjam, $tanggal_kembali, $total_harga, $status_transaksi);
+        // --- 2. START TRANSACTION AND EXECUTION ---
+        if ($valid_request) {
+            $conn->begin_transaction(); // Mulai transaksi database
+            $transaction_ok = true;
 
-        if ($stmt->execute()) {
-            $id_transaksi = $conn->insert_id;
+            // 2.1. Insert transaksi
+            $query_transaksi = "INSERT INTO transaksi (id_user, tanggal_pinjam, tanggal_kembali, total_harga, status_transaksi) 
+                              VALUES (?, ?, ?, ?, ?)";
+            $stmt_transaksi = $conn->prepare($query_transaksi);
+            
+            $tanggal_kembali_db = !empty($tanggal_kembali) ? $tanggal_kembali : null;
+            $stmt_transaksi->bind_param("issds", $id_user, $tanggal_pinjam, $tanggal_kembali_db, $total_harga, $status_transaksi);
 
-            // Insert detail transaksi
-            $detail_query = "INSERT INTO detail_transaksi (id_transaksi, id_barang, jumlah, harga_satuan) VALUES (?, ?, ?, ?)";
-            $detail_stmt = $conn->prepare($detail_query);
+            if (!$stmt_transaksi->execute()) {
+                $transaction_ok = false;
+            } else {
+                $id_transaksi = $conn->insert_id;
 
-            foreach ($detail_data as $detail) {
-                $detail_stmt->bind_param("iiii", $id_transaksi, $detail['id_barang'], $detail['jumlah'], $detail['harga_satuan']);
-                $detail_stmt->execute();
+                // 2.2. Insert detail transaksi & Update stok
+                $detail_query = "INSERT INTO detail_transaksi (id_transaksi, id_barang, jumlah, harga_satuan) VALUES (?, ?, ?, ?)";
+                $detail_stmt = $conn->prepare($detail_query);
+                
+                $stock_update_query = "UPDATE barang SET stok = stok - ? WHERE id_barang = ?"; // Query Pengurangan Stok
+                $stock_stmt = $conn->prepare($stock_update_query);
+
+                foreach ($detail_data as $detail) {
+                    // Insert detail
+                    $detail_stmt->bind_param("iiii", $id_transaksi, $detail['id_barang'], $detail['jumlah'], $detail['harga_satuan']);
+                    if (!$detail_stmt->execute()) {
+                        $transaction_ok = false;
+                        break;
+                    }
+                    
+                    // Update stok (Pengurangan Stok)
+                    $stock_stmt->bind_param("ii", $detail['jumlah'], $detail['id_barang']);
+                    if (!$stock_stmt->execute()) {
+                        $transaction_ok = false;
+                        break;
+                    }
+                }
+                $detail_stmt->close();
+                $stock_stmt->close();
             }
-            $detail_stmt->close();
+            $stmt_transaksi->close();
 
-            $success = "Transaksi berhasil dibuat! (ID: " . $id_transaksi . ")";
-        } else {
-            $error = "Gagal membuat transaksi!";
+            // --- 3. COMMIT or ROLLBACK ---
+            if ($transaction_ok) {
+                $conn->commit();
+                $success = "Transaksi berhasil dibuat! (ID: " . $id_transaksi . ")";
+            } else {
+                $conn->rollback();
+                $error = "Gagal membuat transaksi! Data tidak disimpan. (Cek log server untuk detail)";
+            }
         }
-        $stmt->close();
     }
 }
 ?>
