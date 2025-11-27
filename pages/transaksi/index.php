@@ -51,8 +51,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['action']) && $_GET['acti
     }
 }
 
-// Ambil semua transaksi
-$query = "SELECT t.*, u.nama_lengkap, COUNT(dt.id_detail) as jumlah_item
+// NEW CODE (menghitung total kuantitas barang)
+$query = "SELECT t.*, u.nama_lengkap, SUM(dt.jumlah) as jumlah_item 
           FROM transaksi t
           LEFT JOIN users u ON t.id_user = u.id_user
           LEFT JOIN detail_transaksi dt ON t.id_transaksi = dt.id_transaksi
