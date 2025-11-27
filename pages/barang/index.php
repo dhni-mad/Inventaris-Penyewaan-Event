@@ -12,22 +12,35 @@ $error = '';
 $success = '';
 
 // GET - Ambil data barang
+// File: pages/barang/index.php
+
+// GET - Ambil data barang
 if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
     $id = intval($_GET['id']);
     
-    // Cek apakah barang digunakan di detail transaksi
-    $check = $conn->query("SELECT COUNT(*) as total FROM detail_transaksi WHERE id_barang = $id");
-    $result = $check->fetch_assoc();
+    // Cek apakah barang digunakan di detail transaksi (menggunakan prepared statement)
+    $check_query = "SELECT COUNT(*) as total FROM detail_transaksi WHERE id_barang = ?";
+    $check_stmt = $conn->prepare($check_query);
+    $check_stmt->bind_param("i", $id);
+    $check_stmt->execute();
+    $result = $check_stmt->get_result();
+    $row = $result->fetch_assoc();
+    $check_stmt->close();
     
-    if ($result['total'] > 0) {
+    if ($row['total'] > 0) {
         $error = "Barang tidak bisa dihapus karena sudah digunakan dalam transaksi!";
     } else {
-        $query = "DELETE FROM barang WHERE id_barang = $id";
-        if ($conn->query($query)) {
+        // DELETE barang (menggunakan prepared statement)
+        $delete_query = "DELETE FROM barang WHERE id_barang = ?";
+        $delete_stmt = $conn->prepare($delete_query);
+        $delete_stmt->bind_param("i", $id);
+        
+        if ($delete_stmt->execute()) {
             $success = "Barang berhasil dihapus!";
         } else {
             $error = "Gagal menghapus barang!";
         }
+        $delete_stmt->close();
     }
 }
 
